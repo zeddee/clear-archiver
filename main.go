@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	log "github.com/sirupsen/logrus"
@@ -14,7 +15,8 @@ import (
 
 // Application is used to share data
 type Application struct {
-	db *sql.DB
+	db      *sql.DB
+	timeNow string
 }
 
 func main() {
@@ -27,6 +29,8 @@ func main() {
 	}
 	db := app.db
 	defer db.Close()
+
+	app.timeNow = time.Now().Format("2006Jan02T150405")
 
 	if err := db.Ping(); err != nil {
 		log.Fatal(err)
@@ -80,7 +84,7 @@ func (app *Application) GetTasks(tableName string) error {
 		return err
 	}
 
-	outputFile := tableName + ".csv"
+	outputFile := app.timeNow + "_" + tableName + ".csv"
 	f, err := os.OpenFile(outputFile, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return fmt.Errorf("Failed to open and write to %s: %s", outputFile, err)
@@ -130,7 +134,7 @@ func (app *Application) GetLists() error {
 		return err
 	}
 
-	outputFile := "lists.csv"
+	outputFile := app.timeNow + "_" + "lists.csv"
 	f2, err := os.OpenFile(outputFile, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return fmt.Errorf("Failed to open and write to %s: %s", outputFile, err)
