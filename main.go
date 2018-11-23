@@ -92,7 +92,9 @@ func (app *Application) GetTasks(tableName string) error {
 	defer f.Close()
 	writer := csv.NewWriter(f)
 
-	writeColumnHeaders(writer, db, tableName)
+	if err := writeColumnHeaders(writer, db, tableName); err != nil {
+		log.Errorf("Failed to write column headings: %s", err)
+	}
 
 	for rows.Next() {
 		t := Task{}
@@ -142,7 +144,9 @@ func (app *Application) GetLists() error {
 	defer f2.Close()
 	writer := csv.NewWriter(f2)
 
-	writeColumnHeaders(writer, db, "lists")
+	if err := writeColumnHeaders(writer, db, "lists"); err != nil {
+		log.Errorf("Failed to write column headings: %s", err)
+	}
 
 	for rows.Next() {
 		r := List{}
@@ -167,7 +171,7 @@ func (app *Application) GetLists() error {
 }
 
 func writeColumnHeaders(writer *csv.Writer, db *sql.DB, tableName string) error {
-	row, err := db.Query(`SELECT * FROM $1 VALUES($1) LIMIT 1`, tableName)
+	row, err := db.Query(fmt.Sprintf(`SELECT * FROM %s LIMIT 1`, tableName))
 	if err != nil {
 		return fmt.Errorf("Failed to access table %s to get column names: %s", tableName, err)
 	}
