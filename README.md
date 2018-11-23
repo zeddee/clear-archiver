@@ -11,6 +11,14 @@ No affiliation with RealMac Software. This is a bootstrapped Go program that:
 1. Reads the Clear database from `$HOME/Library/Containers/com.realmacsoftware.clear.mac/Data/Library/Application Support/com.realmacsoftware.clear.mac/LocalTasks.sqlite`
 2. Saves data from the `tasks` and `completed_tasks` to CSV files.
 
+## Caveat Emptor
+
+`clear-archiver` runs READ-only queries on your Clear database. It never writes to it. 
+
+That being said, interacting directly with a database should _always be done carefully_. Make a backup of your Clear database before running this application.
+
+The program is _unfinished_, and meant as a quick n' dirty way to get some personal tasks done (i.e. saving my Clear todo list in a text file) and as a small demo project to show how easy it is to work with the Go programming language.
+
 ## Requirements
 
 This Go application is built with:
