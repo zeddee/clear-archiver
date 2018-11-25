@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/csv"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"strconv"
@@ -20,17 +21,31 @@ type Application struct {
 }
 
 func main() {
-	app := Application{}
-	dbPath := path.Join(os.Getenv("HOME"), "Library/Containers/com.realmacsoftware.clear.mac/Data/Library/Application Support/com.realmacsoftware.clear.mac/LocalTasks.sqlite")
 	var err error
-	app.db, err = sql.Open("sqlite3", dbPath)
+
+	app := Application{}
+	app.timeNow = time.Now().Format("2006Jan02T150405")
+
+	// Make copy of Clear database so we don't mess with the original db file.
+	if err := os.Mkdir("backups", 0744); err != nil {
+		if !os.IsExist(err) {
+			log.Fatalf("Could not create backup directory: %s", err)
+		}
+	}
+	originPath := path.Join(os.Getenv("HOME"), "Library/Containers/com.realmacsoftware.clear.mac/Data/Library/Application Support/com.realmacsoftware.clear.mac/LocalTasks.sqlite")
+	dbFile := path.Join("backups", app.timeNow+"LocalTasks.backup.sqlite")
+	if err := backupClearDB(originPath, dbFile); err != nil {
+		log.Fatal(err)
+	} else {
+		log.Printf("Created backup of Clear database at: %s", dbFile)
+	}
+
+	app.db, err = sql.Open("sqlite3", dbFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 	db := app.db
 	defer db.Close()
-
-	app.timeNow = time.Now().Format("2006Jan02T150405")
 
 	if err := db.Ping(); err != nil {
 		log.Fatal(err)
@@ -171,16 +186,45 @@ func (app *Application) GetLists() error {
 }
 
 func writeColumnHeaders(writer *csv.Writer, db *sql.DB, tableName string) error {
+	const (
+		ReadColumnsFromTableError = "failed to get column metadata from table"
+		BackupToCSVWriteFail      = "failed to write to CSV"
+	)
+
 	row, err := db.Query(fmt.Sprintf(`SELECT * FROM %s LIMIT 1`, tableName))
 	if err != nil {
-		return fmt.Errorf("Failed to access table %s to get column names: %s", tableName, err)
+		return fmt.Errorf("%s %s. %s", ReadColumnsFromTableError, tableName, err)
 	}
 	columnNames, err := row.Columns()
 	if err != nil {
-		return fmt.Errorf("Failed to get column names for tasks table: %s", err)
+		return fmt.Errorf("%s %s. %s", ReadColumnsFromTableError, tableName, err)
 	}
 	if err := writer.Write(columnNames); err != nil {
-		return fmt.Errorf("Failed to write task table headers: %s", err)
+		return fmt.Errorf("%s: %s", BackupToCSVWriteFail, err)
+	}
+	return nil
+}
+
+func backupClearDB(originPath string, destPath string) error {
+	const (
+		OpenClearDBErr   = "Could not open Clear database."
+		BackupClearDBErr = "Could not make backup of Clear database."
+	)
+
+	originFile, err := os.Open(originPath)
+	if err != nil {
+		return fmt.Errorf("%s: %s", OpenClearDBErr, err)
+	}
+	defer originFile.Close()
+
+	destFile, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("%s: %s", BackupClearDBErr, err)
+	}
+	defer destFile.Close()
+
+	if _, err := io.Copy(destFile, originFile); err != nil {
+		return fmt.Errorf("%s: %s", BackupClearDBErr, err)
 	}
 	return nil
 }
