@@ -122,6 +122,7 @@ func (app *Application) GetTasks(tableName string) error {
 		record := []string{
 			strconv.Itoa(t.ID),
 			t.Identifier,
+			t.ListIdentifier,
 			t.Title,
 			t.PrevIdentifier,
 			t.NextIdentifier,
@@ -135,11 +136,12 @@ func (app *Application) GetTasks(tableName string) error {
 
 // List is the structure of a list as stored in Clear
 type List struct {
-	ID            int     `json:"id"`
-	Identifier    string  `json:"identifier"`
-	Title         string  `json:"title"`
-	Scroll        float64 `json:"scroll"`
-	PrevIdentfier string  `json:"prev_identifier"`
+	ID             int     `json:"id"`
+	Identifier     string  `json:"identifier"`
+	ListIdentifier string  `json:"list_identifier"`
+	Title          string  `json:"title"`
+	Scroll         float64 `json:"scroll"`
+	PrevIdentfier  string  `json:"prev_identifier"`
 }
 
 // GetLists gets all lists from the Clear sqlite3 database
@@ -165,7 +167,7 @@ func (app *Application) GetLists() error {
 
 	for rows.Next() {
 		r := List{}
-		if err := rows.Scan(&r.ID, &r.Identifier, &r.Title, &r.Scroll, &r.PrevIdentfier); err != nil {
+		if err := rows.Scan(&r.ID, &r.Identifier, &r.ListIdentifier, &r.Title, &r.Scroll, &r.PrevIdentfier); err != nil {
 			// Don't kill operation; just log the error and continue extracting records
 			log.Warning(r.ID, ":", err)
 		}
@@ -173,6 +175,7 @@ func (app *Application) GetLists() error {
 		record := []string{
 			strconv.Itoa(r.ID),
 			r.Identifier,
+			r.ListIdentifier,
 			r.Title,
 			strconv.Itoa(int(r.Scroll)),
 			r.PrevIdentfier,
